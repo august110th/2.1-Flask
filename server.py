@@ -68,6 +68,13 @@ def validate(date_to_validate: dict, validation_class: Type[AdvertisementCheck])
         raise HttpError(409, err.errors())
 
 
+def get_by_id(item_id: int, orm_model: Type[Advertisement], session):
+    orm_item = session.query(orm_model).get(item_id)
+    if orm_item is None:
+        raise HttpError(404, 'ad is not found')
+    return orm_item
+
+
 class AdvertisementsView(MethodView):
     def get(self, advertisements_id: int):
         with Session() as session:
@@ -88,8 +95,12 @@ class AdvertisementsView(MethodView):
             session.commit()
             return jsonify({'status': 'ok', 'id': new_advt.id})
 
-    def delete(self):
-        pass
+    def delete(self, advertisements_id: int):
+        with Session() as session:
+            advt = get_by_id(advertisements_id, Advertisement, session)
+            session.delete(advt)
+            session.commit()
+            return jsonify({'status': 'success'})
 
 
 class OwnersView(MethodView):
@@ -111,12 +122,9 @@ class OwnersView(MethodView):
             session.commit()
             return jsonify({'status': 'ok', 'id': new_owner.id})
 
-    def delete(self):
-        pass
-
 
 app.add_url_rule('/advt/', view_func=AdvertisementsView.as_view('advt_post'), methods=['POST'])
-app.add_url_rule('/advt/<int:advertisements_id>/', view_func=AdvertisementsView.as_view('advt_get'), methods=['GET'])
+app.add_url_rule('/advt/<int:advertisements_id>/', view_func=AdvertisementsView.as_view('advt_get'), methods=['GET', 'DELETE'])
 app.add_url_rule('/owners/', view_func=OwnersView.as_view('owners_post'), methods=['POST'])
 app.add_url_rule('/owners/<int:owners_id>/', view_func=OwnersView.as_view('owners_get'), methods=['GET'])
 app.run()
